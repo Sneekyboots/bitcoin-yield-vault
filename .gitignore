@@ -6,7 +6,7 @@
 
 # pnpm deploy output
 /bundle
-
+.env
 # Hardhat Build Artifacts
 /artifacts
 
