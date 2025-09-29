@@ -1,6 +1,6 @@
-import { ethers } from "hardhat";
+import { ethers } from "ethers";
 import { BigNumber } from "ethers";
-
+import {utils} from "ethers";
 /**
  * Utility functions for Bitcoin Yield Vault operations
  */

@@ -1,4 +1,5 @@
 import fs from 'fs';
+import { ethers } from "ethers";
 
 interface DeploymentConfig {
   systemContract: string;
@@ -73,9 +74,9 @@ const defaultConfig: DeploymentConfig = {
 async function main() {
   console.log("Starting Bitcoin Yield Vault deployment...");
   
-  // Import hardhat runtime environment dynamically
-  const hre = await import("hardhat");
-  const ethers = hre.ethers;
+const hre = require("hardhat");
+const { ethers } = hre;
+
   
   const [deployer] = await ethers.getSigners();
   

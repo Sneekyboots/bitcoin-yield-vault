@@ -1,5 +1,5 @@
 import { expect } from "chai";
-import { ethers } from "hardhat";
+import { ethers } from "ethers";
 import { Signer } from "ethers";
 import { CrossChainYield, SystemContract, CompoundAdapter } from "../typechain-types";
 
