@@ -1,16 +1,17 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity 0.8.26;
 
 import "@zetachain/protocol-contracts/contracts/zevm/SystemContract.sol";
-import "@zetachain/protocol-contracts/contracts/zevm/interfaces/zContract.sol";
+import "@zetachain/protocol-contracts/contracts/zevm/interfaces/UniversalContract.sol";
 import "@zetachain/protocol-contracts/contracts/zevm/interfaces/IZRC20.sol";
+import "@zetachain/protocol-contracts/contracts/Revert.sol";
 
 /**
  * @title BitcoinYieldVault
  * @notice Omnichain Bitcoin Yield Vault - Enables Bitcoin holders to earn yield across multiple DeFi protocols
  * @dev Universal Smart Contract implementing ZetaChain's cross-chain capabilities
  */
-contract BitcoinYieldVault is zContract {
+contract BitcoinYieldVault is UniversalContract, Revertable, Abortable {
     // State variables
     SystemContract public immutable systemContract;
     
@@ -242,20 +243,14 @@ contract BitcoinYieldVault is zContract {
     
     /**
      * @notice Universal Contract onRevert - Handle failed cross-chain calls
-     * @param context Cross-chain call context
-     * @param zrc20 ZRC20 token address
-     * @param amount Token amount
-     * @param message Encoded message data
+     * @param context Revert context containing sender, asset, amount, and message
      */
     function onRevert(
-        RevertContext calldata context,
-        address zrc20,
-        uint256 amount,
-        bytes calldata message
+        RevertContext calldata context
     ) external override {
-        // Decode message
+        // Decode message from revert context
         (bytes32 txId, uint256 deployAmount, address targetProtocol) = abi.decode(
-            message,
+            context.revertMessage,
             (bytes32, uint256, address)
         );
         
@@ -284,20 +279,14 @@ contract BitcoinYieldVault is zContract {
     
     /**
      * @notice Universal Contract onAbort - Handle aborted cross-chain calls
-     * @param context Cross-chain call context
-     * @param zrc20 ZRC20 token address
-     * @param amount Token amount
-     * @param message Encoded message data
+     * @param context Abort context containing sender, asset, amount, and message
      */
     function onAbort(
-        AbortContext calldata context,
-        address zrc20,
-        uint256 amount,
-        bytes calldata message
+        AbortContext calldata context
     ) external override {
-        // Decode message
+        // Decode message from abort context
         (bytes32 txId, uint256 deployAmount, address targetProtocol) = abi.decode(
-            message,
+            context.revertMessage,
             (bytes32, uint256, address)
         );
         
@@ -612,7 +601,7 @@ contract BitcoinYieldVault is zContract {
         uint256 targetChain,
         TxStatus status
     ) {
-        CrossChainTx storage tx = crossChainTxs[txId];
-        return (tx.user, tx.amount, tx.targetChain, tx.status);
+        CrossChainTx storage txInfo = crossChainTxs[txId];
+        return (txInfo.user, txInfo.amount, txInfo.targetChain, txInfo.status);
     }
 }

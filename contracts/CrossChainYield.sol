@@ -1,28 +1,20 @@
 // SPDX-License-Identifier: MIT
-pragma solidity ^0.8.28;
+pragma solidity 0.8.26;
 
 import "@zetachain/protocol-contracts/contracts/zevm/SystemContract.sol";
-import "@zetachain/protocol-contracts/contracts/zevm/interfaces/zContract.sol";
+import "@zetachain/protocol-contracts/contracts/zevm/interfaces/UniversalContract.sol";
 import "@zetachain/protocol-contracts/contracts/zevm/interfaces/IZRC20.sol";
+import "@zetachain/protocol-contracts/contracts/Revert.sol";
+import "./interfaces/IYieldProtocol.sol";
 
 /**
  * @title CrossChainYield
  * @notice Protocol orchestration hub for managing yield farming operations across multiple blockchains
  * @dev Handles protocol integrations, cross-chain messaging, and yield optimization for the Bitcoin Yield Vault
  */
-contract CrossChainYield is zContract {
+contract CrossChainYield is UniversalContract, Revertable, Abortable {
     // System contract reference
     SystemContract public immutable systemContract;
-    
-    // Protocol adapter interface
-    interface IYieldProtocol {
-        function deposit(uint256 amount) external returns (bool success);
-        function withdraw(uint256 amount) external returns (bool success);
-        function harvest() external returns (uint256 yield);
-        function getBalance(address user) external view returns (uint256 balance);
-        function getCurrentAPY() external view returns (uint256 apy);
-        function getProtocolName() external pure returns (string memory name);
-    }
     
     // Protocol configuration structure
     struct ProtocolConfig {
@@ -391,8 +383,8 @@ contract CrossChainYield is zContract {
             user, protocolId, amount, block.timestamp, "deploy"
         ));
         
-        bytes memory callData = abi.encodeWithSelector(
-            IYieldProtocol.deposit.selector,
+        bytes memory callData = abi.encodeWithSignature(
+            "deposit(uint256)",
             amount
         );
         
@@ -431,8 +423,8 @@ contract CrossChainYield is zContract {
             user, protocolId, amount, block.timestamp, "withdraw"
         ));
         
-        bytes memory callData = abi.encodeWithSelector(
-            IYieldProtocol.withdraw.selector,
+        bytes memory callData = abi.encodeWithSignature(
+            "withdraw(uint256)",
             amount
         );
         
@@ -471,9 +463,7 @@ contract CrossChainYield is zContract {
             user, protocolId, yieldAmount, block.timestamp, "harvest"
         ));
         
-        bytes memory callData = abi.encodeWithSelector(
-            IYieldProtocol.harvest.selector
-        );
+        bytes memory callData = abi.encodeWithSignature("harvest()");
         
         crossChainOps[opId] = CrossChainOperation({
             user: user,
@@ -562,18 +552,12 @@ contract CrossChainYield is zContract {
     
     /**
      * @notice Handle failed cross-chain calls
-     * @param context Revert context
-     * @param zrc20 ZRC20 token address
-     * @param amount Token amount
-     * @param message Encoded message data
+     * @param context Revert context containing sender, asset, amount, and message
      */
     function onRevert(
-        RevertContext calldata context,
-        address zrc20,
-        uint256 amount,
-        bytes calldata message
+        RevertContext calldata context
     ) external override {
-        (bytes32 opId, bytes memory callData) = abi.decode(message, (bytes32, bytes));
+        (bytes32 opId, bytes memory callData) = abi.decode(context.revertMessage, (bytes32, bytes));
         
         CrossChainOperation storage operation = crossChainOps[opId];
         require(operation.status == OperationStatus.InProgress, "Operation not in progress");
@@ -594,18 +578,12 @@ contract CrossChainYield is zContract {
     
     /**
      * @notice Handle aborted cross-chain calls
-     * @param context Abort context
-     * @param zrc20 ZRC20 token address
-     * @param amount Token amount
-     * @param message Encoded message data
+     * @param context Abort context containing sender, asset, amount, and message
      */
     function onAbort(
-        AbortContext calldata context,
-        address zrc20,
-        uint256 amount,
-        bytes calldata message
+        AbortContext calldata context
     ) external override {
-        (bytes32 opId, bytes memory callData) = abi.decode(message, (bytes32, bytes));
+        (bytes32 opId, bytes memory callData) = abi.decode(context.revertMessage, (bytes32, bytes));
         
         CrossChainOperation storage operation = crossChainOps[opId];
         require(operation.status == OperationStatus.InProgress, "Operation not in progress");
